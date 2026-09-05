@@ -1,29 +1,264 @@
-<html>
-    <head>
-        <h1> 나의 작은 챗봇</h1>
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>실시간 채팅</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #eef2f7;
+      color: #172033;
+    }
+    .app {
+      width: min(100%, 1100px);
+      height: 100vh;
+      margin: auto;
+      display: flex;
+      background: white;
+      overflow: hidden;
+      box-shadow: 0 0 25px #0001;
+    }
+    aside {
+      width: 290px;
+      border-right: 1px solid #e5e9f0;
+      background: #f8fafc;
+    }
+    .brand {
+      padding: 24px;
+      font-size: 22px;
+      font-weight: bold;
+      color: #2563eb;
+    }
+    .profile {
+      margin: 0 16px 18px;
+      padding: 14px;
+      border-radius: 12px;
+      background: #e8f0ff;
+      font-size: 14px;
+    }
+    .room {
+      padding: 16px 22px;
+      cursor: pointer;
+      border-left: 3px solid transparent;
+    }
+    .room.active, .room:hover {
+      background: #e8f0ff;
+      border-left-color: #2563eb;
+    }
+    main {
+      min-width: 0;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+    header {
+      height: 76px;
+      padding: 0 25px;
+      display: flex;
+      align-items: center;
+      border-bottom: 1px solid #e5e9f0;
+    }
+    header h1 { margin: 0; font-size: 20px; }
+    header span {
+      margin-left: 12px;
+      color: #16a34a;
+      font-size: 13px;
+    }
+    #messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px;
+    }
+    .message {
+      display: flex;
+      margin: 14px 0;
+      gap: 10px;
+    }
+    .message.me { justify-content: flex-end; }
+    .avatar {
+      width: 34px;
+      height: 34px;
+      display: grid;
+      place-items: center;
+      flex: 0 0 34px;
+      border-radius: 50%;
+      background: #dbeafe;
+    }
+    .bubble {
+      max-width: min(70%, 520px);
+      padding: 11px 14px;
+      border-radius: 15px;
+      background: #f1f5f9;
+      line-height: 1.45;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .me .bubble {
+      color: white;
+      background: #2563eb;
+      border-bottom-right-radius: 4px;
+    }
+    .meta {
+      margin-top: 4px;
+      color: #94a3b8;
+      font-size: 11px;
+    }
+    .me .meta { text-align: right; }
+    form {
+      display: flex;
+      gap: 10px;
+      padding: 18px 24px;
+      border-top: 1px solid #e5e9f0;
+    }
+    input {
+      min-width: 0;
+      flex: 1;
+      padding: 14px 16px;
+      border: 1px solid #d5dce7;
+      border-radius: 12px;
+      outline: none;
+      font-size: 15px;
+    }
+    input:focus { border-color: #2563eb; }
+    button {
+      padding: 0 22px;
+      border: 0;
+      border-radius: 12px;
+      color: white;
+      background: #2563eb;
+      cursor: pointer;
+      font-size: 15px;
+    }
+    button:hover { background: #1d4ed8; }
+    @media (max-width: 650px) {
+      aside { width: 76px; }
+      .brand { padding: 20px 10px; text-align: center; font-size: 0; }
+      .brand::after { content: "💬"; font-size: 24px; }
+      .profile { margin: 10px; padding: 10px 4px; text-align: center; }
+      .profile strong, .profile small { display: none; }
+      .room { padding: 18px 0; text-align: center; font-size: 0; }
+      .room::before { content: "👥"; font-size: 20px; }
+      header { padding: 0 16px; }
+      #messages { padding: 16px 12px; }
+      form { padding: 12px; }
+      .bubble { max-width: 82%; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside>
+      <div class="brand">ChatSpace</div>
+      <div class="profile">
+        <strong>내 프로필</strong><br>
+        <small>🟢 온라인</small>
+      </div>
+      <div class="room active">일반 채팅</div>
+      <div class="room">개발 이야기</div>
+      <div class="room">자유 게시판</div>
+    </aside>
 
-    </head>
-     <body>
-        <h1> 나의 작은 챗봇 </h1>
-        <a href="newpage.html">링크</a> 
-        <div>
-            <p id = "chat"> </p>
-            <input value = 1 id = "input">
-            <button onclick="send()">전송</button>
+    <main>
+      <header>
+        <h1 id="roomTitle">일반 채팅</h1>
+        <span>● 온라인</span>
+      </header>
 
-        </div>
-        <script>
-            function send() {
-                const text = document.querySelector("#input")
-                const chat = document.querySelector("#chat")
+      <section id="messages" aria-live="polite"></section>
 
-                chat.innerHTML += text.value
+      <form id="chatForm">
+        <input id="messageInput" type="text" placeholder="메시지를 입력하세요..." autocomplete="off" required>
+        <button type="submit">전송</button>
+      </form>
+    </main>
+  </div>
 
-                
-        </script>
+  <script>
+    const messages = document.querySelector("#messages");
+    const form = document.querySelector("#chatForm");
+    const input = document.querySelector("#messageInput");
+    const rooms = document.querySelectorAll(".room");
+    const roomTitle = document.querySelector("#roomTitle");
 
+    let currentRoom = "일반 채팅";
+    const defaultMessages = [
+      { sender: "bot", text: "안녕하세요! 채팅을 시작해 보세요.", time: "09:00" }
+    ];
 
-     </body>
+    function getMessages() {
+      return JSON.parse(localStorage.getItem(`chat-${currentRoom}`) || "null")
+        || defaultMessages;
+    }
 
+    function saveMessages(items) {
+      localStorage.setItem(`chat-${currentRoom}`, JSON.stringify(items));
+    }
 
+    function timeNow() {
+      return new Date().toLocaleTimeString("ko-KR", {
+        hour: "2-digit",
+        minute: "2-digit"
+      });
+    }
+
+    function render() {
+      messages.innerHTML = "";
+
+      getMessages().forEach(message => {
+        const row = document.createElement("div");
+        row.className = `message ${message.sender === "me" ? "me" : ""}`;
+
+        row.innerHTML = `
+          ${message.sender !== "me" ? '<div class="avatar">🤖</div>' : ""}
+          <div>
+            <div class="bubble"></div>
+            <div class="meta">${message.time}</div>
+          </div>
+        `;
+
+        row.querySelector(".bubble").textContent = message.text;
+        messages.appendChild(row);
+      });
+
+      messages.scrollTop = messages.scrollHeight;
+    }
+
+    function addMessage(sender, text) {
+      const items = getMessages();
+      items.push({ sender, text, time: timeNow() });
+      saveMessages(items);
+      render();
+    }
+
+    form.addEventListener("submit", event => {
+      event.preventDefault();
+
+      const text = input.value.trim();
+      if (!text) return;
+
+      addMessage("me", text);
+      input.value = "";
+      input.focus();
+
+      setTimeout(() => {
+        addMessage("bot", `"${text}" 메시지를 확인했습니다.`);
+      }, 600);
+    });
+
+    rooms.forEach(room => {
+      room.addEventListener("click", () => {
+        rooms.forEach(item => item.classList.remove("active"));
+        room.classList.add("active");
+        currentRoom = room.textContent.trim();
+        roomTitle.textContent = currentRoom;
+        render();
+      });
+    });
+
+    render();
+  </script>
+</body>
 </html>
